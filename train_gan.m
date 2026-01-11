@@ -94,16 +94,29 @@ fprintf('\n');
 fprintf('Building Generator...\n');
 netG = buildGenerator(params);
 fprintf('Generator parameters: %d\n', sum(cellfun(@numel, netG.Learnables.Value)));
+fprintf('\n');
+
+%% Build Discriminator
+fprintf('Building Discriminator...\n');
+netD = buildDiscriminator(params);
+fprintf('Discriminator parameters: %d\n', sum(cellfun(@numel, netD.Learnables.Value)));
+fprintf('\n');
+
+%% GPU Diagnostics and Setup
+fprintf('==============================================\n');
+fprintf('  GPU Diagnostics\n');
+fprintf('==============================================\n');
+[gpuAvailable, gpuInfo] = checkAndReportGPU();
+fprintf('\n');
 
 %% Sanity Check: Test Generator
 fprintf('Sanity check: Testing generator...\n');
 try
     % Create test input with correct shape for featureInputLayer: [latentDim x N]
-    Z_test = dlarray(randn(params.latentDim, 2, 'single'), 'CB');
-    if strcmp(params.executionEnvironment, 'auto') || strcmp(params.executionEnvironment, 'gpu')
-        if canUseGPU
-            Z_test = gpuArray(Z_test);
-        end
+    if gpuAvailable && (strcmp(params.executionEnvironment, 'auto') || strcmp(params.executionEnvironment, 'gpu'))
+        Z_test = dlarray(randn(params.latentDim, 2, 'single', 'gpuArray'), 'CB');
+    else
+        Z_test = dlarray(randn(params.latentDim, 2, 'single'), 'CB');
     end
 
     % Forward pass
@@ -132,12 +145,6 @@ catch ME
 end
 fprintf('\n');
 
-%% Build Discriminator
-fprintf('Building Discriminator...\n');
-netD = buildDiscriminator(params);
-fprintf('Discriminator parameters: %d\n', sum(cellfun(@numel, netD.Learnables.Value)));
-fprintf('\n');
-
 %% Initialize training
 avgG = [];
 avgGS = [];
@@ -154,12 +161,11 @@ fprintf('==============================================\n');
 fprintf('  Starting Training\n');
 fprintf('==============================================\n');
 fprintf('Execution Environment: %s\n', params.executionEnvironment);
-if strcmp(params.executionEnvironment, 'auto') || strcmp(params.executionEnvironment, 'gpu')
-    if canUseGPU
-        fprintf('GPU detected: %s\n', gpuDevice().Name);
-    else
-        fprintf('No GPU detected, using CPU\n');
-    end
+if gpuAvailable && (strcmp(params.executionEnvironment, 'auto') || strcmp(params.executionEnvironment, 'gpu'))
+    fprintf('Training on GPU: %s\n', gpuInfo.Name);
+    fprintf('Available VRAM: %.2f GB\n', gpuInfo.AvailableMemory / 1e9);
+else
+    fprintf('Training on CPU\n');
 end
 fprintf('\n');
 
@@ -193,7 +199,12 @@ for epoch = 1:params.numEpochs
 
         % Generate random latent vectors (format: [latentDim x N] for featureInputLayer)
         % CRITICAL: Must be dlarray with format 'CB' (Channel x Batch)
-        Z = randn(params.latentDim, batchSize, 'like', XReal);
+        % If GPU is available, create Z directly on GPU
+        if gpuAvailable && (strcmp(params.executionEnvironment, 'auto') || strcmp(params.executionEnvironment, 'gpu'))
+            Z = randn(params.latentDim, batchSize, 'single', 'gpuArray');
+        else
+            Z = randn(params.latentDim, batchSize, 'single');
+        end
         Z = dlarray(Z, 'CB');  % Explicitly label: C=latentDim (100), B=batchSize (8)
 
         % Sanity check: Verify Z dimensions are correct
@@ -233,10 +244,8 @@ for epoch = 1:params.numEpochs
         if mod(iteration, params.previewEvery) == 0
             % Generate preview images (format: 'CB' for featureInputLayer)
             ZPreviewDL = dlarray(ZPreview, 'CB');
-            if strcmp(params.executionEnvironment, 'auto') || strcmp(params.executionEnvironment, 'gpu')
-                if canUseGPU
-                    ZPreviewDL = gpuArray(ZPreviewDL);
-                end
+            if gpuAvailable && (strcmp(params.executionEnvironment, 'auto') || strcmp(params.executionEnvironment, 'gpu'))
+                ZPreviewDL = gpuArray(ZPreviewDL);
             end
 
             XGenerated = predict(netG, ZPreviewDL);
@@ -284,6 +293,112 @@ fprintf('  - Synthetic images: %s\n', fullfile(params.outputFolder, 'synthetic')
 fprintf('\n');
 
 %% ========== HELPER FUNCTIONS ==========
+
+function [gpuAvailable, gpuInfo] = checkAndReportGPU()
+    % Check GPU availability and print diagnostics
+    %
+    % Returns:
+    %   gpuAvailable - boolean, true if GPU is available
+    %   gpuInfo - struct with GPU information (Name, ComputeCapability, AvailableMemory)
+
+    gpuAvailable = false;
+    gpuInfo = struct('Name', 'N/A', 'ComputeCapability', 'N/A', 'AvailableMemory', 0);
+
+    % Check if Parallel Computing Toolbox is installed
+    fprintf('Checking Parallel Computing Toolbox...\n');
+    v = ver('parallel');
+    if isempty(v)
+        fprintf('  ✗ Parallel Computing Toolbox NOT installed\n');
+        fprintf('  → MATLAB cannot use GPU without this toolbox\n');
+        fprintf('\n');
+        printGPUFixInstructions();
+        return;
+    else
+        fprintf('  ✓ Parallel Computing Toolbox installed (v%s)\n', v.Version);
+    end
+
+    % Check GPU device count
+    fprintf('\nChecking GPU devices...\n');
+    try
+        numGPUs = gpuDeviceCount;
+        fprintf('  GPU Device Count: %d\n', numGPUs);
+
+        if numGPUs == 0
+            fprintf('  ✗ No GPU devices detected by MATLAB\n');
+            fprintf('\n');
+            printGPUFixInstructions();
+            return;
+        end
+
+        % Get GPU device information
+        fprintf('\nGPU Device Information:\n');
+        try
+            g = gpuDevice();
+            gpuAvailable = true;
+            gpuInfo.Name = g.Name;
+            gpuInfo.ComputeCapability = g.ComputeCapability;
+            gpuInfo.AvailableMemory = g.AvailableMemory;
+            gpuInfo.TotalMemory = g.TotalMemory;
+
+            fprintf('  ✓ GPU Available: %s\n', g.Name);
+            fprintf('    - Compute Capability: %s\n', g.ComputeCapability);
+            fprintf('    - Total Memory: %.2f GB\n', g.TotalMemory / 1e9);
+            fprintf('    - Available Memory: %.2f GB\n', g.AvailableMemory / 1e9);
+            fprintf('    - Device Index: %d\n', g.Index);
+            fprintf('    - CUDA Version: %s\n', g.ToolkitVersion);
+
+            % Check if memory is sufficient
+            minRequiredMemory = 2e9; % 2 GB minimum
+            if g.AvailableMemory < minRequiredMemory
+                fprintf('\n  ⚠ WARNING: Low GPU memory (%.2f GB available)\n', g.AvailableMemory / 1e9);
+                fprintf('    Recommended: At least 2 GB for batch size 8\n');
+                fprintf('    Consider reducing batch size if OOM errors occur\n');
+            end
+
+        catch ME
+            fprintf('  ✗ Error accessing GPU device: %s\n', ME.message);
+            gpuAvailable = false;
+        end
+
+    catch ME
+        fprintf('  ✗ Error checking GPU devices: %s\n', ME.message);
+        fprintf('\n');
+        printGPUFixInstructions();
+        return;
+    end
+end
+
+function printGPUFixInstructions()
+    % Print instructions on how to enable GPU support
+    fprintf('==============================================\n');
+    fprintf('  How to Enable GPU Support in MATLAB\n');
+    fprintf('==============================================\n');
+    fprintf('1. Install NVIDIA GPU drivers:\n');
+    fprintf('   - Download from: https://www.nvidia.com/drivers\n');
+    fprintf('   - For RTX A2000: Use "Quadro/RTX Desktop" driver series\n');
+    fprintf('   - Recommended: Latest Game Ready or Studio driver\n');
+    fprintf('\n');
+    fprintf('2. Install CUDA Toolkit (if not already installed):\n');
+    fprintf('   - MATLAB R2021a+: CUDA 11.x recommended\n');
+    fprintf('   - MATLAB R2023a+: CUDA 11.8 or 12.x supported\n');
+    fprintf('   - Download from: https://developer.nvidia.com/cuda-downloads\n');
+    fprintf('\n');
+    fprintf('3. Verify MATLAB can see GPU:\n');
+    fprintf('   >> gpuDeviceCount  %% Should return > 0\n');
+    fprintf('   >> gpuDevice       %% Should show GPU info\n');
+    fprintf('\n');
+    fprintf('4. If GPU is still not detected:\n');
+    fprintf('   - Restart MATLAB after driver installation\n');
+    fprintf('   - Check Windows Device Manager → Display Adapters\n');
+    fprintf('   - Run: nvidia-smi (in Command Prompt) to verify driver\n');
+    fprintf('   - Check MATLAB GPU support: https://www.mathworks.com/help/parallel-computing/gpu-support-by-release.html\n');
+    fprintf('\n');
+    fprintf('5. Install Parallel Computing Toolbox (if missing):\n');
+    fprintf('   - Open MATLAB Add-Ons → Get Add-Ons\n');
+    fprintf('   - Search for "Parallel Computing Toolbox"\n');
+    fprintf('   - Install (requires active MATLAB license)\n');
+    fprintf('==============================================\n');
+end
 
 function [gradD, lossD] = modelGradientsD(netD, netG, XReal, Z, params)
     % Discriminator gradients

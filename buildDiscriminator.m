@@ -19,6 +19,13 @@ function netD = buildDiscriminator(params)
 
     layers = [];
 
+    %% Helper function for DCGAN-style convolution layer
+    % DCGAN standard: Normal(0, 0.02) initialization
+    conv2d = @(filterSize, numFilters, name, varargin) ...
+        convolution2dLayer(filterSize, numFilters, 'Name', name, ...
+            'WeightsInitializer', @(sz) 0.02*randn(sz, 'single'), ...
+            'BiasInitializer', 'zeros', varargin{:});
+
     %% Architecture selection based on trainSize
     if trainHeight == 64 && trainWidth == 128
         % ===== 64x128 Discriminator =====
@@ -27,36 +34,36 @@ function netD = buildDiscriminator(params)
                 'Normalization', 'none')
 
             % 64x128 -> 32x64
-            convolution2dLayer(4, 64, 'Name', 'conv1', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 64, 'conv1', 'Stride', 2, 'Padding', 'same')
             leakyReluLayer(0.2, 'Name', 'lrelu1')
             dropoutLayer(0.3, 'Name', 'dropout1')
 
             % 32x64 -> 16x32
-            convolution2dLayer(4, 128, 'Name', 'conv2', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 128, 'conv2', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn2')
             leakyReluLayer(0.2, 'Name', 'lrelu2')
             dropoutLayer(0.3, 'Name', 'dropout2')
 
             % 16x32 -> 8x16
-            convolution2dLayer(4, 256, 'Name', 'conv3', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 256, 'conv3', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn3')
             leakyReluLayer(0.2, 'Name', 'lrelu3')
             dropoutLayer(0.3, 'Name', 'dropout3')
 
             % 8x16 -> 4x8
-            convolution2dLayer(4, 512, 'Name', 'conv4', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 512, 'conv4', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn4')
             leakyReluLayer(0.2, 'Name', 'lrelu4')
             dropoutLayer(0.3, 'Name', 'dropout4')
 
             % 4x8 -> 2x4
-            convolution2dLayer(4, 1024, 'Name', 'conv5', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 1024, 'conv5', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn5')
             leakyReluLayer(0.2, 'Name', 'lrelu5')
             dropoutLayer(0.3, 'Name', 'dropout5')
 
             % 2x4 -> 1x1
-            convolution2dLayer([2 4], 1, 'Name', 'conv6', 'Stride', 1, 'Padding', 0)
+            conv2d([2 4], 1, 'conv6', 'Stride', 1, 'Padding', 0)
             sigmoidLayer('Name', 'sigmoid')
         ];
 
@@ -67,36 +74,36 @@ function netD = buildDiscriminator(params)
                 'Normalization', 'none')
 
             % 128x256 -> 64x128
-            convolution2dLayer(4, 64, 'Name', 'conv1', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 64, 'conv1', 'Stride', 2, 'Padding', 'same')
             leakyReluLayer(0.2, 'Name', 'lrelu1')
             dropoutLayer(0.3, 'Name', 'dropout1')
 
             % 64x128 -> 32x64
-            convolution2dLayer(4, 128, 'Name', 'conv2', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 128, 'conv2', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn2')
             leakyReluLayer(0.2, 'Name', 'lrelu2')
             dropoutLayer(0.3, 'Name', 'dropout2')
 
             % 32x64 -> 16x32
-            convolution2dLayer(4, 256, 'Name', 'conv3', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 256, 'conv3', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn3')
             leakyReluLayer(0.2, 'Name', 'lrelu3')
             dropoutLayer(0.3, 'Name', 'dropout3')
 
             % 16x32 -> 8x16
-            convolution2dLayer(4, 512, 'Name', 'conv4', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 512, 'conv4', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn4')
             leakyReluLayer(0.2, 'Name', 'lrelu4')
             dropoutLayer(0.3, 'Name', 'dropout4')
 
             % 8x16 -> 4x8
-            convolution2dLayer(4, 1024, 'Name', 'conv5', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 1024, 'conv5', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn5')
             leakyReluLayer(0.2, 'Name', 'lrelu5')
             dropoutLayer(0.3, 'Name', 'dropout5')
 
             % 4x8 -> 1x1
-            convolution2dLayer([4 8], 1, 'Name', 'conv6', 'Stride', 1, 'Padding', 0)
+            conv2d([4 8], 1, 'conv6', 'Stride', 1, 'Padding', 0)
             sigmoidLayer('Name', 'sigmoid')
         ];
 
@@ -107,30 +114,30 @@ function netD = buildDiscriminator(params)
                 'Normalization', 'none')
 
             % 64x64 -> 32x32
-            convolution2dLayer(4, 64, 'Name', 'conv1', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 64, 'conv1', 'Stride', 2, 'Padding', 'same')
             leakyReluLayer(0.2, 'Name', 'lrelu1')
             dropoutLayer(0.3, 'Name', 'dropout1')
 
             % 32x32 -> 16x16
-            convolution2dLayer(4, 128, 'Name', 'conv2', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 128, 'conv2', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn2')
             leakyReluLayer(0.2, 'Name', 'lrelu2')
             dropoutLayer(0.3, 'Name', 'dropout2')
 
             % 16x16 -> 8x8
-            convolution2dLayer(4, 256, 'Name', 'conv3', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 256, 'conv3', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn3')
             leakyReluLayer(0.2, 'Name', 'lrelu3')
             dropoutLayer(0.3, 'Name', 'dropout3')
 
             % 8x8 -> 4x4
-            convolution2dLayer(4, 512, 'Name', 'conv4', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 512, 'conv4', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn4')
             leakyReluLayer(0.2, 'Name', 'lrelu4')
             dropoutLayer(0.3, 'Name', 'dropout4')
 
             % 4x4 -> 1x1
-            convolution2dLayer(4, 1, 'Name', 'conv5', 'Stride', 1, 'Padding', 0)
+            conv2d(4, 1, 'conv5', 'Stride', 1, 'Padding', 0)
             sigmoidLayer('Name', 'sigmoid')
         ];
 
@@ -141,36 +148,36 @@ function netD = buildDiscriminator(params)
                 'Normalization', 'none')
 
             % 128x128 -> 64x64
-            convolution2dLayer(4, 64, 'Name', 'conv1', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 64, 'conv1', 'Stride', 2, 'Padding', 'same')
             leakyReluLayer(0.2, 'Name', 'lrelu1')
             dropoutLayer(0.3, 'Name', 'dropout1')
 
             % 64x64 -> 32x32
-            convolution2dLayer(4, 128, 'Name', 'conv2', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 128, 'conv2', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn2')
             leakyReluLayer(0.2, 'Name', 'lrelu2')
             dropoutLayer(0.3, 'Name', 'dropout2')
 
             % 32x32 -> 16x16
-            convolution2dLayer(4, 256, 'Name', 'conv3', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 256, 'conv3', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn3')
             leakyReluLayer(0.2, 'Name', 'lrelu3')
             dropoutLayer(0.3, 'Name', 'dropout3')
 
             % 16x16 -> 8x8
-            convolution2dLayer(4, 512, 'Name', 'conv4', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 512, 'conv4', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn4')
             leakyReluLayer(0.2, 'Name', 'lrelu4')
             dropoutLayer(0.3, 'Name', 'dropout4')
 
             % 8x8 -> 4x4
-            convolution2dLayer(4, 1024, 'Name', 'conv5', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 1024, 'conv5', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn5')
             leakyReluLayer(0.2, 'Name', 'lrelu5')
             dropoutLayer(0.3, 'Name', 'dropout5')
 
             % 4x4 -> 1x1
-            convolution2dLayer(4, 1, 'Name', 'conv6', 'Stride', 1, 'Padding', 0)
+            conv2d(4, 1, 'conv6', 'Stride', 1, 'Padding', 0)
             sigmoidLayer('Name', 'sigmoid')
         ];
 
@@ -181,42 +188,42 @@ function netD = buildDiscriminator(params)
                 'Normalization', 'none')
 
             % 256x256 -> 128x128
-            convolution2dLayer(4, 64, 'Name', 'conv1', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 64, 'conv1', 'Stride', 2, 'Padding', 'same')
             leakyReluLayer(0.2, 'Name', 'lrelu1')
             dropoutLayer(0.3, 'Name', 'dropout1')
 
             % 128x128 -> 64x64
-            convolution2dLayer(4, 128, 'Name', 'conv2', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 128, 'conv2', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn2')
             leakyReluLayer(0.2, 'Name', 'lrelu2')
             dropoutLayer(0.3, 'Name', 'dropout2')
 
             % 64x64 -> 32x32
-            convolution2dLayer(4, 256, 'Name', 'conv3', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 256, 'conv3', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn3')
             leakyReluLayer(0.2, 'Name', 'lrelu3')
             dropoutLayer(0.3, 'Name', 'dropout3')
 
             % 32x32 -> 16x16
-            convolution2dLayer(4, 512, 'Name', 'conv4', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 512, 'conv4', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn4')
             leakyReluLayer(0.2, 'Name', 'lrelu4')
             dropoutLayer(0.3, 'Name', 'dropout4')
 
             % 16x16 -> 8x8
-            convolution2dLayer(4, 1024, 'Name', 'conv5', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 1024, 'conv5', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn5')
             leakyReluLayer(0.2, 'Name', 'lrelu5')
             dropoutLayer(0.3, 'Name', 'dropout5')
 
             % 8x8 -> 4x4
-            convolution2dLayer(4, 1024, 'Name', 'conv6', 'Stride', 2, 'Padding', 'same')
+            conv2d(4, 1024, 'conv6', 'Stride', 2, 'Padding', 'same')
             batchNormalizationLayer('Name', 'bn6')
             leakyReluLayer(0.2, 'Name', 'lrelu6')
             dropoutLayer(0.3, 'Name', 'dropout6')
 
             % 4x4 -> 1x1
-            convolution2dLayer(4, 1, 'Name', 'conv7', 'Stride', 1, 'Padding', 0)
+            conv2d(4, 1, 'conv7', 'Stride', 1, 'Padding', 0)
             sigmoidLayer('Name', 'sigmoid')
         ];
 
@@ -234,32 +241,12 @@ function netD = buildDiscriminator(params)
     lgraph = layerGraph(layers);
     netD = dlnetwork(lgraph);
 
-    % Initialize weights with DCGAN standard: Normal(mean=0, std=0.02)
-    netD = initializeGANWeights(netD);
+    % NOTE: Weights are initialized at layer definition time, not post-hoc.
+    % This approach is more robust across MATLAB versions and avoids issues
+    % with dlnetwork.Learnables format (which requires cell arrays containing
+    % dlarray objects in newer MATLAB versions, not raw numeric arrays).
 
     fprintf('  Discriminator built successfully:\n');
     fprintf('    Input shape:  [%d x %d x %d x N]\n', trainHeight, trainWidth, numChannels);
     fprintf('    Output shape: [1 x 1 x 1 x N]\n');
-end
-
-%% DCGAN Weight Initialization Helper
-function net = initializeGANWeights(net)
-    % Initialize weights according to DCGAN paper:
-    % Normal distribution with mean=0, std=0.02
-    % Biases initialized to 0
-
-    for i = 1:height(net.Learnables)
-        layerName = net.Learnables.Layer{i};
-        paramName = net.Learnables.Parameter{i};
-
-        if contains(paramName, 'Weights')
-            % Initialize weights with Normal(0, 0.02)
-            sz = size(net.Learnables.Value{i});
-            net.Learnables.Value{i} = 0.02 * randn(sz, 'single');
-        elseif contains(paramName, 'Bias')
-            % Initialize biases to 0
-            sz = size(net.Learnables.Value{i});
-            net.Learnables.Value{i} = zeros(sz, 'single');
-        end
-    end
 end
