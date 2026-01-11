@@ -29,12 +29,12 @@ fprintf('==============================================\n\n');
 params = struct();
 
 % Data parameters
-params.dataFolder = './data/images';
+% UPDATED: Using cropped images from new path
+params.dataFolder = 'G:\Fax\Prijava Teme\Clanek za busbare\Code\data\images';
 params.trainSize = [64 128];         % Training size [height width]
-                                     % Options: [64 128] (2:1, memory efficient)
-                                     %          [128 256] (2:1, higher quality)
-                                     %          [64 64], [128 128], [256 256] (square)
-params.autoCrop = true;              % Auto-crop white background
+                                     % NOTE: Current generator architecture supports [64 128]
+                                     % To use [128 128], need to update buildGenerator.m
+params.autoCrop = false;             % Disabled - images are already cropped
 params.cropThreshold = 0.85;         % Threshold for white detection (0-1)
 
 % Network parameters
@@ -42,16 +42,18 @@ params.latentDim = 100;              % Latent vector dimension
 params.numChannels = 3;              % Will be auto-detected (1=grayscale, 3=RGB)
 
 % Training parameters
-params.numEpochs = 300;              % Number of epochs
-params.miniBatchSize = 8;            % Batch size (8-16 for laptop GPU)
-params.learnRate = 0.0002;           % Learning rate
+params.numEpochs = 500;              % Number of epochs (increased for better convergence)
+params.miniBatchSize = 32;           % Batch size INCREASED from 8 to 32
+                                     % Larger batches prevent mode collapse
+                                     % (64 may cause OOM on RTX A2000 4GB, use 32 for safety)
+params.learnRate = 0.0002;           % Learning rate (standard DCGAN)
 params.beta1 = 0.5;                  % Adam beta1
 params.executionEnvironment = 'auto'; % 'auto', 'gpu', or 'cpu'
 
-% Stabilization parameters
+% Stabilization parameters - ENHANCED to prevent mode collapse
 params.labelSmoothing = 0.9;         % Real labels = 0.9 instead of 1.0
-params.instanceNoise = 0.05;         % Initial instance noise std
-params.noiseDecay = 0.995;           % Instance noise decay per epoch
+params.instanceNoise = 0.1;          % Initial instance noise std (INCREASED from 0.05)
+params.noiseDecay = 0.998;           % Instance noise decay per epoch (SLOWER decay)
 
 % Output parameters
 params.outputFolder = './outputs';
