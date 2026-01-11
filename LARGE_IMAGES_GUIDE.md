@@ -180,8 +180,8 @@ If you need 4200x2128 output:
 % Load generator
 load('./outputs/models/generator.mat', 'netG', 'params');
 
-% Generate one image
-Z = dlarray(randn(1, 1, params.latentDim, 1, 'single'), 'SSCB');
+% Generate one image (format: [latentDim x 1] for featureInputLayer)
+Z = dlarray(randn(params.latentDim, 1, 'single'), 'CB');
 XGenerated = predict(netG, Z);
 XGenerated = extractdata(XGenerated);
 
