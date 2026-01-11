@@ -38,9 +38,9 @@ function generateSynthetic(netG, params)
             currentBatchSize = batchSize;
         end
 
-        % Generate random latent vectors
-        Z = randn(1, 1, latentDim, currentBatchSize, 'single');
-        Z = dlarray(Z, 'SSCB');
+        % Generate random latent vectors (format: [latentDim x N] for featureInputLayer)
+        Z = randn(latentDim, currentBatchSize, 'single');
+        Z = dlarray(Z, 'CB');
 
         % Move to GPU if available
         if strcmp(params.executionEnvironment, 'auto') || strcmp(params.executionEnvironment, 'gpu')

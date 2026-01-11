@@ -98,8 +98,8 @@ fprintf('Generator parameters: %d\n', sum(cellfun(@numel, netG.Learnables.Value)
 %% Sanity Check: Test Generator
 fprintf('Sanity check: Testing generator...\n');
 try
-    % Create test input with correct shape: [1 x 1 x latentDim x N]
-    Z_test = dlarray(randn(1, 1, params.latentDim, 2, 'single'), 'SSCB');
+    % Create test input with correct shape for featureInputLayer: [latentDim x N]
+    Z_test = dlarray(randn(params.latentDim, 2, 'single'), 'CB');
     if strcmp(params.executionEnvironment, 'auto') || strcmp(params.executionEnvironment, 'gpu')
         if canUseGPU
             Z_test = gpuArray(Z_test);
@@ -144,8 +144,8 @@ avgGS = [];
 avgD = [];
 avgDS = [];
 
-% Fixed latent vector for preview
-ZPreview = randn(1, 1, params.latentDim, params.numPreviewImages, 'single');
+% Fixed latent vector for preview (format: [latentDim x N] for featureInputLayer)
+ZPreview = randn(params.latentDim, params.numPreviewImages, 'single');
 
 iteration = 0;
 startTime = tic;
@@ -186,8 +186,8 @@ for epoch = 1:params.numEpochs
             end
         end
 
-        % Generate random latent vectors
-        Z = randn(1, 1, params.latentDim, size(XReal, 4), 'like', XReal);
+        % Generate random latent vectors (format: [latentDim x N] for featureInputLayer)
+        Z = randn(params.latentDim, size(XReal, 4), 'like', XReal);
 
         % Add instance noise to real images (stabilization)
         if currentInstanceNoise > 0
@@ -215,8 +215,8 @@ for epoch = 1:params.numEpochs
 
         % ===== Save Preview =====
         if mod(iteration, params.previewEvery) == 0
-            % Generate preview images
-            ZPreviewDL = dlarray(ZPreview, 'SSCB');
+            % Generate preview images (format: 'CB' for featureInputLayer)
+            ZPreviewDL = dlarray(ZPreview, 'CB');
             if strcmp(params.executionEnvironment, 'auto') || strcmp(params.executionEnvironment, 'gpu')
                 if canUseGPU
                     ZPreviewDL = gpuArray(ZPreviewDL);
