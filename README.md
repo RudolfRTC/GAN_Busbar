@@ -1,6 +1,38 @@
 # GAN za Generiranje Sintetičnih Slik Industrijskih Kosov
 
-MATLAB implementacija DCGAN (Deep Convolutional GAN) za generiranje sintetičnih slik industrijskih kosov iz majhnega dataseta (~70 slik). Sistem je optimiziran za produktne fotografije na belem ozadju in vključuje avtomatsko obrezovanje, močno augmentacijo ter stabilizacijske tehnike za trening z malo podatki.
+Ta repozitorij vsebuje **dve implementaciji** GAN-ov za generiranje sintetičnih slik industrijskih kosov iz majhnega dataseta (~70 slik):
+
+## 📂 Implementaciji
+
+### 🔵 MATLAB DCGAN (ta branch: `main`)
+MATLAB implementacija DCGAN (Deep Convolutional GAN) za generiranje sintetičnih slik. Sistem je optimiziran za produktne fotografije na belem ozadju in vključuje avtomatsko obrezovanje, močno augmentacijo ter stabilizacijske tehnike za trening z malo podatki.
+
+**Primerno za:**
+- Uporabnike MATLAB-a
+- Hitro prototipiranje
+- Izobraževalne namene
+
+### 🐍 Python StyleGAN2-ADA (branch: `python-stylegan2-ada`)
+Python implementacija z **NVIDIA StyleGAN2-ADA** - state-of-the-art GAN arhitektura z adaptivno augmentacijo, optimizirana za majhne datasete.
+
+**Prednosti:**
+- ⭐ **Občutno boljša kvaliteta slik** kot DCGAN
+- 🔄 **Adaptivna augmentacija (ADA)** preprečuje overfitting
+- 🎯 **Optimizirano za malo podatkov** (~50-100 slik)
+- 🚀 **Production-ready** pipeline
+
+**Za preklop na Python implementacijo:**
+```bash
+git checkout python-stylegan2-ada
+```
+
+**Podrobna navodila:** Glej `python_stylegan2ada/README.md` v Python branchu.
+
+---
+
+## MATLAB DCGAN Dokumentacija
+
+Spodaj so navodila za MATLAB implementacijo. Za Python StyleGAN2-ADA glej branch `python-stylegan2-ada`.
 
 ## Zahteve
 
