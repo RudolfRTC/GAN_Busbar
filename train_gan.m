@@ -192,7 +192,18 @@ for epoch = 1:params.numEpochs
         end
 
         % Generate random latent vectors (format: [latentDim x N] for featureInputLayer)
+        % CRITICAL: Must be dlarray with format 'CB' (Channel x Batch)
         Z = randn(params.latentDim, batchSize, 'like', XReal);
+        Z = dlarray(Z, 'CB');  % Explicitly label: C=latentDim (100), B=batchSize (8)
+
+        % Sanity check: Verify Z dimensions are correct
+        zSize = size(Z);
+        assert(zSize(1) == params.latentDim, ...
+            'ERROR: Z channel dimension is %d, expected %d. Z must be [latentDim x batchSize].', ...
+            zSize(1), params.latentDim);
+        assert(zSize(2) == batchSize, ...
+            'ERROR: Z batch dimension is %d, expected %d. Z must be [latentDim x batchSize].', ...
+            zSize(2), batchSize);
 
         % Add instance noise to real images (stabilization)
         if currentInstanceNoise > 0
