@@ -4,7 +4,7 @@ function [mbq, params] = preprocessAndLoadDatastore(params)
 % Inputs:
 %   params - struct with fields:
 %     .dataFolder - path to image folder
-%     .imageSize - target image size
+%     .trainSize - target training size [height width], e.g., [64 128]
 %     .autoCrop - whether to auto-crop white background
 %     .cropThreshold - threshold for white detection
 %     .miniBatchSize - batch size
@@ -95,8 +95,8 @@ function [mbq, params] = preprocessAndLoadDatastore(params)
             img = autoCropWhiteBackground(img, params.cropThreshold);
         end
 
-        % Resize to target size
-        img = imresize(img, [params.imageSize, params.imageSize]);
+        % Resize to target size (trainSize is [height width])
+        img = imresize(img, [params.trainSize(1), params.trainSize(2)]);
 
         % Convert to single and normalize to [-1, 1]
         imgOut = single(img) / 255.0;  % [0, 1]

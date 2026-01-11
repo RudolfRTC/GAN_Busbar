@@ -10,10 +10,11 @@
 %    - Synthetic images: ./outputs/synthetic/
 %
 % PARAMETERS (edit below as needed):
-% - imageSize: 64 or 128 (default: 128)
+% - trainSize: training resolution [height width] (default: [64 128] for 2:1 aspect ratio)
+%   Supported: [64 128], [128 256], [64 64], [128 128], [256 256]
 % - latentDim: latent vector size (default: 100)
 % - numEpochs: training epochs (default: 300)
-% - miniBatchSize: batch size (default: 16, auto-adjusted if needed)
+% - miniBatchSize: batch size (default: 8-16, auto-adjusted if needed)
 % - learnRate: Adam learning rate (default: 0.0002)
 % - numSynthetic: number of synthetic images to generate (default: 2000)
 
@@ -29,7 +30,10 @@ params = struct();
 
 % Data parameters
 params.dataFolder = './data/images';
-params.imageSize = 128;              % Image size: 64 or 128
+params.trainSize = [64 128];         % Training size [height width]
+                                     % Options: [64 128] (2:1, memory efficient)
+                                     %          [128 256] (2:1, higher quality)
+                                     %          [64 64], [128 128], [256 256] (square)
 params.autoCrop = true;              % Auto-crop white background
 params.cropThreshold = 0.85;         % Threshold for white detection (0-1)
 
@@ -39,7 +43,7 @@ params.numChannels = 3;              % Will be auto-detected (1=grayscale, 3=RGB
 
 % Training parameters
 params.numEpochs = 300;              % Number of epochs
-params.miniBatchSize = 16;           % Batch size (will auto-adjust if needed)
+params.miniBatchSize = 8;            % Batch size (8-16 for laptop GPU)
 params.learnRate = 0.0002;           % Learning rate
 params.beta1 = 0.5;                  % Adam beta1
 params.executionEnvironment = 'auto'; % 'auto', 'gpu', or 'cpu'
@@ -56,7 +60,8 @@ params.numPreviewImages = 16;        % Number of images in preview grid
 params.numSynthetic = 2000;          % Number of synthetic images to generate
 
 fprintf('Parameters:\n');
-fprintf('  Image Size: %dx%d\n', params.imageSize, params.imageSize);
+fprintf('  Training Size: %dx%d (HxW)\n', params.trainSize(1), params.trainSize(2));
+fprintf('  Aspect Ratio: %.2f:1\n', params.trainSize(2) / params.trainSize(1));
 fprintf('  Latent Dim: %d\n', params.latentDim);
 fprintf('  Epochs: %d\n', params.numEpochs);
 fprintf('  Batch Size: %d\n', params.miniBatchSize);
@@ -89,6 +94,43 @@ fprintf('\n');
 fprintf('Building Generator...\n');
 netG = buildGenerator(params);
 fprintf('Generator parameters: %d\n', sum(cellfun(@numel, netG.Learnables.Value)));
+
+%% Sanity Check: Test Generator
+fprintf('Sanity check: Testing generator...\n');
+try
+    % Create test input with correct shape: [1 x 1 x latentDim x N]
+    Z_test = dlarray(randn(1, 1, params.latentDim, 2, 'single'), 'SSCB');
+    if strcmp(params.executionEnvironment, 'auto') || strcmp(params.executionEnvironment, 'gpu')
+        if canUseGPU
+            Z_test = gpuArray(Z_test);
+        end
+    end
+
+    % Forward pass
+    X_test = predict(netG, Z_test);
+    X_test = extractdata(X_test);
+
+    % Check output shape
+    [outH, outW, outC, outN] = size(X_test);
+    fprintf('  Generator output shape: [%d x %d x %d x %d]\n', outH, outW, outC, outN);
+    fprintf('  Expected shape:         [%d x %d x %d x %d]\n', ...
+        params.trainSize(1), params.trainSize(2), params.numChannels, 2);
+
+    % Assert correct shape
+    assert(outH == params.trainSize(1), ...
+        'ERROR: Generator output height %d != expected %d', outH, params.trainSize(1));
+    assert(outW == params.trainSize(2), ...
+        'ERROR: Generator output width %d != expected %d', outW, params.trainSize(2));
+    assert(outC == params.numChannels, ...
+        'ERROR: Generator output channels %d != expected %d', outC, params.numChannels);
+
+    fprintf('  ✓ Generator test PASSED!\n');
+catch ME
+    fprintf('  ✗ Generator test FAILED!\n');
+    fprintf('  Error: %s\n', ME.message);
+    error('Generator sanity check failed. Please check buildGenerator.m architecture.');
+end
+fprintf('\n');
 
 %% Build Discriminator
 fprintf('Building Discriminator...\n');
