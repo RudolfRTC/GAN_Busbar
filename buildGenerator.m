@@ -43,7 +43,10 @@ function netG = buildGenerator(params)
 
         % Project to 4x8x256 = 8192 features
         % [latentDim x N] -> [8192 x N]
-        fullyConnectedLayer(startH * startW * startChannels, 'Name', 'fc')
+        % DCGAN-style initialization: Normal(0, 0.02) for weights, zeros for bias
+        fullyConnectedLayer(startH * startW * startChannels, 'Name', 'fc', ...
+            'WeightsInitializer', @(sz) 0.02*randn(sz, 'single'), ...
+            'BiasInitializer', 'zeros')
 
         % Reshape to [4 x 8 x 256 x N]
         % This uses a custom function to reshape from [8192 x N] to [4 x 8 x 256 x N]
@@ -59,28 +62,36 @@ function netG = buildGenerator(params)
         % For 'same': padding chosen so outputSize ≈ inputSize * stride
         % H: 4 * 2 = 8 ✓
         % W: 8 * 2 = 16 ✓
-        transposedConv2dLayer(4, 128, 'Name', 'tconv1', 'Stride', [2 2], 'Cropping', 'same')
+        transposedConv2dLayer(4, 128, 'Name', 'tconv1', 'Stride', [2 2], 'Cropping', 'same', ...
+            'WeightsInitializer', @(sz) 0.02*randn(sz, 'single'), ...
+            'BiasInitializer', 'zeros')
         batchNormalizationLayer('Name', 'bn1')
         leakyReluLayer(0.2, 'Name', 'lrelu1')  % LeakyReLU prevents dying neurons
 
         % Layer 2: 8x16x128 -> 16x32x128
         % H: 8 * 2 = 16 ✓
         % W: 16 * 2 = 32 ✓
-        transposedConv2dLayer(4, 128, 'Name', 'tconv2', 'Stride', [2 2], 'Cropping', 'same')
+        transposedConv2dLayer(4, 128, 'Name', 'tconv2', 'Stride', [2 2], 'Cropping', 'same', ...
+            'WeightsInitializer', @(sz) 0.02*randn(sz, 'single'), ...
+            'BiasInitializer', 'zeros')
         batchNormalizationLayer('Name', 'bn2')
         leakyReluLayer(0.2, 'Name', 'lrelu2')  % LeakyReLU prevents dying neurons
 
         % Layer 3: 16x32x128 -> 32x64x64
         % H: 16 * 2 = 32 ✓
         % W: 32 * 2 = 64 ✓
-        transposedConv2dLayer(4, 64, 'Name', 'tconv3', 'Stride', [2 2], 'Cropping', 'same')
+        transposedConv2dLayer(4, 64, 'Name', 'tconv3', 'Stride', [2 2], 'Cropping', 'same', ...
+            'WeightsInitializer', @(sz) 0.02*randn(sz, 'single'), ...
+            'BiasInitializer', 'zeros')
         batchNormalizationLayer('Name', 'bn3')
         leakyReluLayer(0.2, 'Name', 'lrelu3')  % LeakyReLU prevents dying neurons
 
         % Layer 4: 32x64x64 -> 64x128x32
         % H: 32 * 2 = 64 ✓
         % W: 64 * 2 = 128 ✓
-        transposedConv2dLayer(4, 32, 'Name', 'tconv4', 'Stride', [2 2], 'Cropping', 'same')
+        transposedConv2dLayer(4, 32, 'Name', 'tconv4', 'Stride', [2 2], 'Cropping', 'same', ...
+            'WeightsInitializer', @(sz) 0.02*randn(sz, 'single'), ...
+            'BiasInitializer', 'zeros')
         batchNormalizationLayer('Name', 'bn4')
         leakyReluLayer(0.2, 'Name', 'lrelu4')  % LeakyReLU prevents dying neurons
 
@@ -88,7 +99,9 @@ function netG = buildGenerator(params)
         % Stride=[1 1] to maintain spatial size
         % H: 64 * 1 = 64 ✓
         % W: 128 * 1 = 128 ✓
-        transposedConv2dLayer(3, numChannels, 'Name', 'tconv5', 'Stride', [1 1], 'Cropping', 'same')
+        transposedConv2dLayer(3, numChannels, 'Name', 'tconv5', 'Stride', [1 1], 'Cropping', 'same', ...
+            'WeightsInitializer', @(sz) 0.02*randn(sz, 'single'), ...
+            'BiasInitializer', 'zeros')
         tanhLayer('Name', 'tanh')
     ];
 
@@ -96,8 +109,10 @@ function netG = buildGenerator(params)
     lgraph = layerGraph(layers);
     netG = dlnetwork(lgraph);
 
-    % Initialize weights with DCGAN standard: Normal(mean=0, std=0.02)
-    netG = initializeGANWeights(netG);
+    % NOTE: Weights are initialized at layer definition time, not post-hoc.
+    % This approach is more robust across MATLAB versions and avoids issues
+    % with dlnetwork.Learnables format (which requires cell arrays containing
+    % dlarray objects in newer MATLAB versions, not raw numeric arrays).
 
     fprintf('  Generator built successfully:\n');
     fprintf('    Input shape:   [%d x N] (featureInputLayer)\n', latentDim);
@@ -121,28 +136,6 @@ function Y = reshapeTensor(X, H, W, C)
 
     % Convert back to dlarray with correct format
     Y = dlarray(Y, 'SSCB');
-end
-
-%% DCGAN Weight Initialization Helper
-function net = initializeGANWeights(net)
-    % Initialize weights according to DCGAN paper:
-    % Normal distribution with mean=0, std=0.02
-    % Biases initialized to 0
-
-    for i = 1:height(net.Learnables)
-        layerName = net.Learnables.Layer{i};
-        paramName = net.Learnables.Parameter{i};
-
-        if contains(paramName, 'Weights')
-            % Initialize weights with Normal(0, 0.02)
-            sz = size(net.Learnables.Value{i});
-            net.Learnables.Value{i} = 0.02 * randn(sz, 'single');
-        elseif contains(paramName, 'Bias')
-            % Initialize biases to 0
-            sz = size(net.Learnables.Value{i});
-            net.Learnables.Value{i} = zeros(sz, 'single');
-        end
-    end
 end
 
 % This architecture is sized to fit NVIDIA Quadro RTX A1000 VRAM constraints.
