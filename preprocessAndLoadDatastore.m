@@ -159,6 +159,10 @@ function [mbq, params] = preprocessAndLoadDatastore(params)
 
     %% Adjust batch size if needed
     numImages = numel(imageFiles);
+
+    % Save number of images to params for later use
+    params.numImages = numImages;
+
     if params.miniBatchSize > numImages
         fprintf('  WARNING: Batch size (%d) > number of images (%d)\n', ...
             params.miniBatchSize, numImages);

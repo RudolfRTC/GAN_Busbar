@@ -81,7 +81,7 @@ end
 %% Load and preprocess data
 fprintf('Loading and preprocessing images...\n');
 [dsTrain, params] = preprocessAndLoadDatastore(params);
-fprintf('Dataset ready: %d images\n', dsTrain.numpartitions);
+fprintf('Dataset ready: %d images\n', params.numImages);
 fprintf('Using %d channels (1=grayscale, 3=RGB)\n', params.numChannels);
 fprintf('\n');
 
