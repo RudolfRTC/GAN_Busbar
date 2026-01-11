@@ -23,3 +23,44 @@ slprj/
 # OS files
 .DS_Store
 Thumbs.db
+
+# ============================================
+# Python StyleGAN2-ADA
+# ============================================
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Python IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python data and outputs
+python_stylegan2ada/data/images/*
+!python_stylegan2ada/data/images/.gitkeep
+
+python_stylegan2ada/outputs/models/*
+!python_stylegan2ada/outputs/models/.gitkeep
+
+python_stylegan2ada/outputs/samples/*
+!python_stylegan2ada/outputs/samples/.gitkeep
+
+python_stylegan2ada/outputs/synthetic/*
+!python_stylegan2ada/outputs/synthetic/.gitkeep
+
+# StyleGAN2-ADA repo (if cloned as submodule alternative)
+python_stylegan2ada/stylegan2-ada-pytorch/
