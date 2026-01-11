@@ -295,8 +295,13 @@ function [gradD, lossD] = modelGradientsD(netD, netG, XReal, Z, params)
     YReal = forward(netD, XReal);
     YGenerated = forward(netD, XGenerated);
 
-    % Label smoothing: real = 0.9, fake = 0.0
-    lossReal = -mean(log(YReal + 1e-8)) * params.labelSmoothing - mean(log(1 - YReal + 1e-8)) * (1 - params.labelSmoothing);
+    % Label smoothing: real target = 0.9 (one-sided), fake target = 0.0
+    % Binary cross entropy with soft targets:
+    % BCE(y, t) = -[t*log(y) + (1-t)*log(1-y)]
+    % For real images with target=labelSmoothing (0.9):
+    lossReal = -mean(params.labelSmoothing * log(YReal + 1e-8) + ...
+                     (1 - params.labelSmoothing) * log(1 - YReal + 1e-8));
+    % For fake images with target=0.0:
     lossFake = -mean(log(1 - YGenerated + 1e-8));
 
     % Total discriminator loss

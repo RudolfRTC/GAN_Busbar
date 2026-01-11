@@ -51,7 +51,7 @@ function netG = buildGenerator(params)
             'Name', 'reshape', 'Formattable', true)
 
         batchNormalizationLayer('Name', 'bn0')
-        reluLayer('Name', 'relu0')
+        leakyReluLayer(0.2, 'Name', 'lrelu0')  % LeakyReLU prevents dying neurons
 
         % Layer 1: 4x8x256 -> 8x16x128
         % Dimension calculation with stride=[2 2], filterSize=4, cropping='same':
@@ -61,28 +61,28 @@ function netG = buildGenerator(params)
         % W: 8 * 2 = 16 ✓
         transposedConv2dLayer(4, 128, 'Name', 'tconv1', 'Stride', [2 2], 'Cropping', 'same')
         batchNormalizationLayer('Name', 'bn1')
-        reluLayer('Name', 'relu1')
+        leakyReluLayer(0.2, 'Name', 'lrelu1')  % LeakyReLU prevents dying neurons
 
         % Layer 2: 8x16x128 -> 16x32x128
         % H: 8 * 2 = 16 ✓
         % W: 16 * 2 = 32 ✓
         transposedConv2dLayer(4, 128, 'Name', 'tconv2', 'Stride', [2 2], 'Cropping', 'same')
         batchNormalizationLayer('Name', 'bn2')
-        reluLayer('Name', 'relu2')
+        leakyReluLayer(0.2, 'Name', 'lrelu2')  % LeakyReLU prevents dying neurons
 
         % Layer 3: 16x32x128 -> 32x64x64
         % H: 16 * 2 = 32 ✓
         % W: 32 * 2 = 64 ✓
         transposedConv2dLayer(4, 64, 'Name', 'tconv3', 'Stride', [2 2], 'Cropping', 'same')
         batchNormalizationLayer('Name', 'bn3')
-        reluLayer('Name', 'relu3')
+        leakyReluLayer(0.2, 'Name', 'lrelu3')  % LeakyReLU prevents dying neurons
 
         % Layer 4: 32x64x64 -> 64x128x32
         % H: 32 * 2 = 64 ✓
         % W: 64 * 2 = 128 ✓
         transposedConv2dLayer(4, 32, 'Name', 'tconv4', 'Stride', [2 2], 'Cropping', 'same')
         batchNormalizationLayer('Name', 'bn4')
-        reluLayer('Name', 'relu4')
+        leakyReluLayer(0.2, 'Name', 'lrelu4')  % LeakyReLU prevents dying neurons
 
         % Layer 5: 64x128x32 -> 64x128x3 (final output)
         % Stride=[1 1] to maintain spatial size
@@ -96,8 +96,8 @@ function netG = buildGenerator(params)
     lgraph = layerGraph(layers);
     netG = dlnetwork(lgraph);
 
-    % Initialize weights (Xavier initialization for better convergence)
-    netG = initialize(netG);
+    % Initialize weights with DCGAN standard: Normal(mean=0, std=0.02)
+    netG = initializeGANWeights(netG);
 
     fprintf('  Generator built successfully:\n');
     fprintf('    Input shape:   [%d x N] (featureInputLayer)\n', latentDim);
@@ -121,6 +121,28 @@ function Y = reshapeTensor(X, H, W, C)
 
     % Convert back to dlarray with correct format
     Y = dlarray(Y, 'SSCB');
+end
+
+%% DCGAN Weight Initialization Helper
+function net = initializeGANWeights(net)
+    % Initialize weights according to DCGAN paper:
+    % Normal distribution with mean=0, std=0.02
+    % Biases initialized to 0
+
+    for i = 1:height(net.Learnables)
+        layerName = net.Learnables.Layer{i};
+        paramName = net.Learnables.Parameter{i};
+
+        if contains(paramName, 'Weights')
+            % Initialize weights with Normal(0, 0.02)
+            sz = size(net.Learnables.Value{i});
+            net.Learnables.Value{i} = 0.02 * randn(sz, 'single');
+        elseif contains(paramName, 'Bias')
+            % Initialize biases to 0
+            sz = size(net.Learnables.Value{i});
+            net.Learnables.Value{i} = zeros(sz, 'single');
+        end
+    end
 end
 
 % This architecture is sized to fit NVIDIA Quadro RTX A1000 VRAM constraints.
