@@ -85,7 +85,7 @@ end
 
 %% Load and preprocess data
 fprintf('Loading and preprocessing images...\n');
-[dsTrain, params] = preprocessAndLoadDatastore(params);
+[mbqTrain, params] = preprocessAndLoadDatastore(params);
 fprintf('Dataset ready: %d images\n', params.numImages);
 fprintf('Using %d channels (1=grayscale, 3=RGB)\n', params.numChannels);
 fprintf('\n');
@@ -166,28 +166,33 @@ fprintf('\n');
 %% Training Loop
 for epoch = 1:params.numEpochs
 
-    % Reset datastore
-    reset(dsTrain);
+    % Reset minibatchqueue at the start of each epoch
+    reset(mbqTrain);
 
     % Decay instance noise
     currentInstanceNoise = params.instanceNoise * (params.noiseDecay ^ epoch);
 
-    while hasdata(dsTrain)
+    while hasdata(mbqTrain)
         iteration = iteration + 1;
 
-        % Read mini-batch
-        XReal = read(dsTrain);
+        % Get next mini-batch from minibatchqueue
+        % minibatchqueue already returns dlarray in SSCB format and on GPU if configured
+        XReal = next(mbqTrain);
 
-        % Convert to dlarray
-        XReal = dlarray(XReal, 'SSCB');
-        if strcmp(params.executionEnvironment, 'auto') || strcmp(params.executionEnvironment, 'gpu')
-            if canUseGPU
-                XReal = gpuArray(XReal);
-            end
+        % Ensure XReal is a dlarray (in case of empty batch or other edge cases)
+        if ~isa(XReal, 'dlarray')
+            XReal = dlarray(XReal, 'SSCB');
+        end
+
+        % Check for empty or undersized batch
+        batchSize = size(XReal, 4);
+        if batchSize == 0
+            warning('Empty batch encountered at iteration %d, skipping...', iteration);
+            continue;
         end
 
         % Generate random latent vectors (format: [latentDim x N] for featureInputLayer)
-        Z = randn(params.latentDim, size(XReal, 4), 'like', XReal);
+        Z = randn(params.latentDim, batchSize, 'like', XReal);
 
         % Add instance noise to real images (stabilization)
         if currentInstanceNoise > 0
