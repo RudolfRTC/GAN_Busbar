@@ -234,10 +234,32 @@ function netD = buildDiscriminator(params)
     lgraph = layerGraph(layers);
     netD = dlnetwork(lgraph);
 
-    % Initialize weights
-    netD = initialize(netD);
+    % Initialize weights with DCGAN standard: Normal(mean=0, std=0.02)
+    netD = initializeGANWeights(netD);
 
     fprintf('  Discriminator built successfully:\n');
     fprintf('    Input shape:  [%d x %d x %d x N]\n', trainHeight, trainWidth, numChannels);
     fprintf('    Output shape: [1 x 1 x 1 x N]\n');
+end
+
+%% DCGAN Weight Initialization Helper
+function net = initializeGANWeights(net)
+    % Initialize weights according to DCGAN paper:
+    % Normal distribution with mean=0, std=0.02
+    % Biases initialized to 0
+
+    for i = 1:height(net.Learnables)
+        layerName = net.Learnables.Layer{i};
+        paramName = net.Learnables.Parameter{i};
+
+        if contains(paramName, 'Weights')
+            % Initialize weights with Normal(0, 0.02)
+            sz = size(net.Learnables.Value{i});
+            net.Learnables.Value{i} = 0.02 * randn(sz, 'single');
+        elseif contains(paramName, 'Bias')
+            % Initialize biases to 0
+            sz = size(net.Learnables.Value{i});
+            net.Learnables.Value{i} = zeros(sz, 'single');
+        end
+    end
 end
