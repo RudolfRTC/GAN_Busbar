@@ -1,0 +1,25 @@
+# MATLAB autosave files
+*.asv
+*.m~
+
+# Output folders (large files)
+outputs/preview/*.png
+outputs/models/*.mat
+outputs/synthetic/*.png
+
+# But keep the directories
+!outputs/preview/.gitkeep
+!outputs/models/.gitkeep
+!outputs/synthetic/.gitkeep
+
+# Data images (may be large)
+data/images/*
+!data/images/.gitkeep
+
+# MATLAB cache
+*.mex*
+slprj/
+
+# OS files
+.DS_Store
+Thumbs.db
