@@ -34,31 +34,11 @@ function [mbq, params] = preprocessAndLoadDatastore(params)
 
     fprintf('  Found %d images\n', numel(imageFiles));
 
-    %% Auto-detect RGB vs Grayscale
-    fprintf('  Auto-detecting color format...\n');
-    numRGB = 0;
-    numGray = 0;
-
-    % Sample first 10 images to detect
-    numSamples = min(10, numel(imageFiles));
-    for i = 1:numSamples
-        imgPath = fullfile(imageFiles(i).folder, imageFiles(i).name);
-        img = imread(imgPath);
-        if size(img, 3) == 3
-            numRGB = numRGB + 1;
-        else
-            numGray = numGray + 1;
-        end
-    end
-
-    % Decide: if majority is RGB, convert all to RGB; else grayscale
-    if numRGB >= numGray
-        params.numChannels = 3;
-        fprintf('  Detected: RGB images (will convert grayscale to RGB if any)\n');
-    else
-        params.numChannels = 1;
-        fprintf('  Detected: Grayscale images (will convert RGB to grayscale if any)\n');
-    end
+    %% Force RGB output (fixed: always generate color images)
+    % FIXED: Always use RGB (3 channels) to ensure generated images are in color
+    % Grayscale training images will be automatically converted to RGB
+    params.numChannels = 3;
+    fprintf('  Color mode: RGB (3 channels) - grayscale images will be converted to RGB\n');
 
     %% Create image datastore
     fullPaths = cellfun(@(folder, name) fullfile(folder, name), ...
