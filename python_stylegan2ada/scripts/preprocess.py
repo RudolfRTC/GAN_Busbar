@@ -258,6 +258,73 @@ def main():
     print(f"Keep aspect ratio: {args.keep_aspect}")
     print()
 
+    # Check if images are truly RGB or grayscale
+    print("Checking if images contain color information...")
+    num_real_rgb = 0
+    num_grayscale = 0
+    num_samples = min(10, len(image_files))
+
+    for img_path in image_files[:num_samples]:
+        try:
+            img = cv2.imread(str(img_path))
+            if img is None:
+                continue
+
+            # Convert BGR to RGB
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+            # Check if image has true color (not just grayscale in RGB format)
+            if img.shape[2] == 3:
+                # Sample 100 random pixels to check for color variation
+                h, w = img.shape[:2]
+                num_pixels = h * w
+                sample_size = min(100, num_pixels)
+                indices = np.random.choice(num_pixels, sample_size, replace=False)
+
+                flat_img = img.reshape(-1, 3)
+                R = flat_img[indices, 0]
+                G = flat_img[indices, 1]
+                B = flat_img[indices, 2]
+
+                # If R, G, B are all equal, it's grayscale in RGB format
+                if np.all(R == G) and np.all(G == B):
+                    num_grayscale += 1
+                else:
+                    num_real_rgb += 1
+            else:
+                # Single channel = grayscale
+                num_grayscale += 1
+        except Exception as e:
+            print(f"Warning: Cannot check {img_path}: {e}")
+
+    # Check if all sampled images are grayscale
+    if num_grayscale == num_samples and num_real_rgb == 0:
+        print()
+        print("=" * 80)
+        print("ERROR: All training images are GRAYSCALE!")
+        print("=" * 80)
+        print()
+        print("The GAN cannot generate colored images if trained on grayscale data.")
+        print()
+        print("SOLUTION: You need RGB (colored) training images!")
+        print()
+        print("Options:")
+        print("  1. Replace images with RGB colored images")
+        print("  2. If you only have grayscale images, use colorization tools:")
+        print("     - DeOldify (AI colorization): https://github.com/jantic/DeOldify")
+        print("     - Online tools: https://imagecolorizer.com/")
+        print("  3. Manually colorize using image editing software")
+        print()
+        print("Processing stopped to prevent generating grayscale outputs.")
+        print("=" * 80)
+        return 1
+
+    # Report color status
+    if num_real_rgb > 0:
+        print(f"✓ Found {num_real_rgb} RGB colored images (out of {num_samples} sampled)")
+        print(f"Color generation: ENABLED - model will generate colored images")
+        print()
+
     # Process images
     success_count = 0
     for img_path in tqdm(image_files, desc="Processing"):
