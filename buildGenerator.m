@@ -21,20 +21,34 @@ function netG = buildGenerator(params)
     trainWidth = params.trainSize(2);
     numChannels = params.numChannels;
 
-    % Validate trainSize
-    if trainHeight ~= 64 || trainWidth ~= 128
-        error(['This generator architecture is designed for trainSize = [64 128].\n' ...
-               'Current trainSize = [%d %d] is not supported.\n' ...
-               'Please set params.trainSize = [64 128] in train_gan.m'], ...
+    % Validate trainSize and determine architecture
+    if trainHeight == 64 && trainWidth == 128
+        % Original: 4x8 -> 64x128 (rectangular)
+        startH = 4;
+        startW = 8;
+        numUpsamples = 4;
+        architecture = '64x128';
+    elseif trainHeight == 128 && trainWidth == 128
+        % Square: 4x4 -> 128x128 (better for square images!)
+        startH = 4;
+        startW = 4;
+        numUpsamples = 5;
+        architecture = '128x128';
+    elseif trainHeight == 256 && trainWidth == 256
+        % High-res square: 4x4 -> 256x256
+        startH = 4;
+        startW = 4;
+        numUpsamples = 6;
+        architecture = '256x256';
+    else
+        error(['Generator supports trainSize:\n' ...
+               '  [64 128]   - rectangular (2:1 aspect ratio)\n' ...
+               '  [128 128]  - square (recommended for square images)\n' ...
+               '  [256 256]  - high-res square (requires more VRAM)\n' ...
+               'Current trainSize = [%d %d] is not supported.'], ...
                trainHeight, trainWidth);
     end
 
-    %% Architecture: 4x8 -> 8x16 -> 16x32 -> 32x64 -> 64x128
-    % Start size: 4x8x256
-    % Upsample 4 times with stride [2 2], then final layer with stride [1 1]
-
-    startH = 4;
-    startW = 8;
     startChannels = 256;  % Reduced for VRAM constraints (RTX A1000)
 
     layers = [
