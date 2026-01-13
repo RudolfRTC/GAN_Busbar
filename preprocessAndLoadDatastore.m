@@ -34,11 +34,71 @@ function [mbq, params] = preprocessAndLoadDatastore(params)
 
     fprintf('  Found %d images\n', numel(imageFiles));
 
+    %% Check if images are truly RGB or grayscale
+    fprintf('  Checking if images contain color information...\n');
+    numRealRGB = 0;
+    numGrayscale = 0;
+    numSamples = min(10, numel(imageFiles));
+
+    for i = 1:numSamples
+        imgPath = fullfile(imageFiles(i).folder, imageFiles(i).name);
+        img = imread(imgPath);
+
+        % Check if image has true color (not just grayscale in RGB format)
+        if size(img, 3) == 3
+            % Check if R, G, B channels are different (true RGB)
+            % Sample 100 random pixels to check for color variation
+            numPixels = size(img, 1) * size(img, 2);
+            sampleSize = min(100, numPixels);
+            idx = randperm(numPixels, sampleSize);
+
+            R = img(:,:,1); R = R(idx);
+            G = img(:,:,2); G = G(idx);
+            B = img(:,:,3); B = B(idx);
+
+            % If R, G, B are all equal, it's grayscale in RGB format
+            if all(R == G) && all(G == B)
+                numGrayscale = numGrayscale + 1;
+            else
+                numRealRGB = numRealRGB + 1;
+            end
+        else
+            % Single channel = grayscale
+            numGrayscale = numGrayscale + 1;
+        end
+    end
+
+    % Check if all sampled images are grayscale
+    if numGrayscale == numSamples && numRealRGB == 0
+        fprintf('\n');
+        fprintf('========================================================================\n');
+        fprintf('ERROR: All training images are GRAYSCALE!\n');
+        fprintf('========================================================================\n');
+        fprintf('\n');
+        fprintf('The GAN cannot generate colored images if trained on grayscale data.\n');
+        fprintf('\n');
+        fprintf('SOLUTION: You need RGB (colored) training images!\n');
+        fprintf('\n');
+        fprintf('Options:\n');
+        fprintf('  1. Replace images in ./data/images/ with RGB colored images\n');
+        fprintf('  2. If you only have grayscale images, use colorization tools:\n');
+        fprintf('     - DeOldify (AI colorization): https://github.com/jantic/DeOldify\n');
+        fprintf('     - Online tools: https://imagecolorizer.com/\n');
+        fprintf('  3. Manually colorize using image editing software (Photoshop, GIMP)\n');
+        fprintf('\n');
+        fprintf('Training stopped to prevent generating grayscale outputs.\n');
+        fprintf('========================================================================\n');
+        error('Training aborted: All training images are grayscale. Add RGB images to continue.');
+    end
+
+    % Report color status
+    if numRealRGB > 0
+        fprintf('  ✓ Found %d RGB colored images (out of %d sampled)\n', numRealRGB, numSamples);
+        fprintf('  Color generation: ENABLED - model will generate colored images\n');
+    end
+
     %% Force RGB output (fixed: always generate color images)
-    % FIXED: Always use RGB (3 channels) to ensure generated images are in color
-    % Grayscale training images will be automatically converted to RGB
     params.numChannels = 3;
-    fprintf('  Color mode: RGB (3 channels) - grayscale images will be converted to RGB\n');
 
     %% Create image datastore
     fullPaths = cellfun(@(folder, name) fullfile(folder, name), ...
