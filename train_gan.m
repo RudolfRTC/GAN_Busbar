@@ -39,7 +39,7 @@ params.cropThreshold = 0.85;         % Threshold for white detection (0-1)
 
 % Network parameters
 params.latentDim = 100;              % Latent vector dimension
-params.numChannels = 3;              % Will be auto-detected (1=grayscale, 3=RGB)
+params.numChannels = 3;              % FIXED: Always use 3 channels (RGB) for color output
 
 % Training parameters
 params.numEpochs = 300;              % Number of epochs
