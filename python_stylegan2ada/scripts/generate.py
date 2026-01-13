@@ -140,6 +140,11 @@ def generate_grid(
         img = (img + 1) * 127.5
         img = img.clamp(0, 255).to(torch.uint8)
         img = img[0].permute(1, 2, 0).cpu().numpy()
+
+        # FIXED: Convert grayscale to RGB if needed
+        if img.shape[2] == 1:
+            img = np.repeat(img, 3, axis=2)  # [H, W, 1] -> [H, W, 3]
+
         images.append(img)
 
     # Create grid
