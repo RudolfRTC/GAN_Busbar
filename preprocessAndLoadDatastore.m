@@ -57,7 +57,7 @@ function [mbq, params] = preprocessAndLoadDatastore(params)
             B = img(:,:,3); B = B(idx);
 
             % If R, G, B are all equal, it's grayscale in RGB format
-            if all(R == G) && all(G == B)
+            if isequal(R, G, B)
                 numGrayscale = numGrayscale + 1;
             else
                 numRealRGB = numRealRGB + 1;

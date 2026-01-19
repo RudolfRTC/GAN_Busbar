@@ -226,10 +226,10 @@ fprintf('[Test 7/%d] Testing Generator-Discriminator integration...\n', totalTes
 try
     % Generate fake images
     Z_test = dlarray(randn(params.latentDim, 2, 'single'), 'CB');
-    X_fake = forward(netG, Z_test);
+    X_fake = predict(netG, Z_test);
 
     % Discriminate fake images
-    Y_fake = forward(netD, X_fake);
+    Y_fake = predict(netD, X_fake);
 
     fprintf('  ✓ Generated images from noise\n');
     fprintf('  ✓ Discriminated generated images\n');

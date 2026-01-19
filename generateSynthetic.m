@@ -44,8 +44,11 @@ function generateSynthetic(netG, params)
 
         % Move to GPU if available
         if strcmp(params.executionEnvironment, 'auto') || strcmp(params.executionEnvironment, 'gpu')
-            if canUseGPU
+            try
+                gpuDevice; % Check if GPU is available
                 Z = gpuArray(Z);
+            catch
+                % No GPU available, continue with CPU
             end
         end
 
